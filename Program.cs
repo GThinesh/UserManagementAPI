@@ -29,26 +29,61 @@ app.MapGet("/users/{id}", (int id) =>
 
 app.MapPost("/users", (User user) =>
 {
-    user.Id = users.Count > 0 ? users.Max(u => u.Id) + 1 : 1;
-    users.Add(user);
-    return Results.Created($"/users/{user.Id}", user);
+    try
+    {
+        if (string.IsNullOrWhiteSpace(user.Name))
+            return Results.BadRequest("Name is required.");
+        if (string.IsNullOrWhiteSpace(user.Email) || !user.Email.Contains("@"))
+            return Results.BadRequest("A valid email is required.");
+        if (users.Any(u => u.Email.Equals(user.Email, StringComparison.OrdinalIgnoreCase)))
+            return Results.BadRequest("Email already exists.");
+
+        user.Id = users.Count > 0 ? users.Max(u => u.Id) + 1 : 1;
+        users.Add(user);
+        return Results.Created($"/users/{user.Id}", user);
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Unexpected error: {ex.Message}");
+    }
 });
 
 app.MapPut("/users/{id}", (int id, User updatedUser) =>
 {
-    var user = users.FirstOrDefault(u => u.Id == id);
-    if (user is null) return Results.NotFound();
-    user.Name = updatedUser.Name;
-    user.Email = updatedUser.Email;
-    return Results.Ok(user);
+    try
+    {
+        var user = users.FirstOrDefault(u => u.Id == id);
+        if (user is null) return Results.NotFound();
+        if (string.IsNullOrWhiteSpace(updatedUser.Name))
+            return Results.BadRequest("Name is required.");
+        if (string.IsNullOrWhiteSpace(updatedUser.Email) || !updatedUser.Email.Contains("@"))
+            return Results.BadRequest("A valid email is required.");
+        if (users.Any(u => u.Email.Equals(updatedUser.Email, StringComparison.OrdinalIgnoreCase) && u.Id != id))
+            return Results.BadRequest("Email already exists.");
+
+        user.Name = updatedUser.Name;
+        user.Email = updatedUser.Email;
+        return Results.Ok(user);
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Unexpected error: {ex.Message}");
+    }
 });
 
 app.MapDelete("/users/{id}", (int id) =>
 {
-    var user = users.FirstOrDefault(u => u.Id == id);
-    if (user is null) return Results.NotFound();
-    users.Remove(user);
-    return Results.NoContent();
+    try
+    {
+        var user = users.FirstOrDefault(u => u.Id == id);
+        if (user is null) return Results.NotFound();
+        users.Remove(user);
+        return Results.NoContent();
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Unexpected error: {ex.Message}");
+    }
 });
 
 app.Run();
