@@ -76,14 +76,23 @@ if (app.Environment.IsDevelopment())
 }
 
 // CRUD Endpoints
+/// <summary>
+/// Retrieves all users.
+/// </summary>
 app.MapGet("/users", () => users);
 
+/// <summary>
+/// Retrieves a user by their ID.
+/// </summary>
 app.MapGet("/users/{id}", (int id) =>
 {
     var user = users.FirstOrDefault(u => u.Id == id);
     return user is not null ? Results.Ok(user) : Results.NotFound();
 });
 
+/// <summary>
+/// Creates a new user. Requires a unique email and a non-empty name.
+/// </summary>
 app.MapPost("/users", (User user) =>
 {
     try
@@ -105,6 +114,9 @@ app.MapPost("/users", (User user) =>
     }
 });
 
+/// <summary>
+/// Updates an existing user's details by ID. Requires a unique email and a non-empty name.
+/// </summary>
 app.MapPut("/users/{id}", (int id, User updatedUser) =>
 {
     try
@@ -128,6 +140,9 @@ app.MapPut("/users/{id}", (int id, User updatedUser) =>
     }
 });
 
+/// <summary>
+/// Deletes a user by their ID.
+/// </summary>
 app.MapDelete("/users/{id}", (int id) =>
 {
     try
