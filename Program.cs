@@ -9,7 +9,64 @@ builder.Services.AddSwaggerGen();
 // In-memory user store
 var users = new List<User>();
 
+
 var app = builder.Build();
+
+
+// Exception handling middleware (should be first)
+app.Use(async (context, next) =>
+{
+    try
+    {
+        await next();
+    }
+    catch (Exception ex)
+    {
+        context.Response.StatusCode = 500;
+        context.Response.ContentType = "application/json";
+        var error = new { error = "Internal server error." };
+        var json = System.Text.Json.JsonSerializer.Serialize(error);
+        await context.Response.WriteAsync(json);
+        // Optionally log the exception
+        Console.WriteLine($"Exception: {ex.Message}");
+    }
+});
+
+// Token validation middleware (should be second)
+app.Use(async (context, next) =>
+{
+    var authHeader = context.Request.Headers["Authorization"].FirstOrDefault();
+    if (string.IsNullOrWhiteSpace(authHeader) || !authHeader.StartsWith("Bearer "))
+    {
+        context.Response.StatusCode = 401;
+        context.Response.ContentType = "application/json";
+        var error = new { error = "Unauthorized: Missing or invalid token." };
+        var json = System.Text.Json.JsonSerializer.Serialize(error);
+        await context.Response.WriteAsync(json);
+        return;
+    }
+    var token = authHeader.Substring("Bearer ".Length).Trim();
+    if (token != "mysecrettoken")
+    {
+        context.Response.StatusCode = 401;
+        context.Response.ContentType = "application/json";
+        var error = new { error = "Unauthorized: Invalid token." };
+        var json = System.Text.Json.JsonSerializer.Serialize(error);
+        await context.Response.WriteAsync(json);
+        return;
+    }
+    await next();
+});
+
+// Logging middleware (should be last)
+app.Use(async (context, next) =>
+{
+    var method = context.Request.Method;
+    var path = context.Request.Path;
+    await next();
+    var statusCode = context.Response.StatusCode;
+    Console.WriteLine($"{method} {path} => {statusCode}");
+});
 
 // Enable Swagger in development
 if (app.Environment.IsDevelopment())
